@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Repaso y simulación de examen</title>
+<style>
+  :root{
+    --bg:#eef1f8;
+    --card:#ffffff;
+    --ink:#1b2333;
+    --muted:#68738c;
+    --line:#e2e6f0;
+    --accent:#4f46e5;
+    --accent-soft:#eceafd;
+    --ok:#15803d;
+    --ok-bg:#e6f6ec;
+    --bad:#b3261e;
+    --bad-bg:#fdecea;
+    --shadow:0 10px 30px rgba(27,35,51,.08);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:radial-gradient(1200px 600px at 50% -10%, #dfe4f7 0%, var(--bg) 55%);
+    color:var(--ink);
+    min-height:100vh;
+    padding:28px 16px 60px;
+    line-height:1.55;
+  }
+  .app{max-width:760px;margin:0 auto;}
+
+  header.top{margin-bottom:18px;text-align:center;}
+  header.top h1{
+    font-size:clamp(1.4rem,4vw,2rem);
+    margin:0 0 6px;
+    letter-spacing:-.02em;
+  }
+  header.top p{margin:0;color:var(--muted);font-size:.92rem;}
+
+  .progress-wrap{
+    display:flex;align-items:center;gap:12px;
+    margin:20px 0 14px;
+  }
+  .progress-track{
+    flex:1;height:9px;border-radius:99px;background:#dfe3ef;overflow:hidden;
+  }
+  .progress-fill{
+    height:100%;width:0;border-radius:99px;
+    background:linear-gradient(90deg,#6366f1,#8b5cf6);
+    transition:width .35s ease;
+  }
+  .progress-label{
+    font-size:.8rem;font-weight:600;color:var(--muted);white-space:nowrap;
+    font-variant-numeric:tabular-nums;
+  }
+
+  .card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:18px;
+    padding:26px 24px 22px;
+    box-shadow:var(--shadow);
+    animation:pop .28s ease;
+  }
+  @keyframes pop{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+
+  .meta{
+    display:flex;justify-content:space-between;align-items:center;
+    gap:10px;flex-wrap:wrap;margin-bottom:14px;
+  }
+  .badge{
+    display:inline-block;
+    background:var(--accent-soft);
+    color:#4338ca;
+    font-size:.72rem;
+    font-weight:700;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    padding:5px 11px;
+    border-radius:99px;
+  }
+  .counter{font-size:.8rem;color:var(--muted);font-weight:600;font-variant-numeric:tabular-nums;}
+
+  .question{
+    font-size:1.08rem;
+    font-weight:650;
+    margin:0 0 18px;
+    line-height:1.5;
+  }
+  .question .lista{
+    display:block;
+    margin:10px 0 0;
+    padding:12px 14px 12px 14px;
+    background:#f7f8fc;
+    border-left:3px solid #c7cbf5;
+    border-radius:10px;
+    font-weight:500;
+    font-size:.95rem;
+    color:#333c52;
+  }
+  .question .lista span{display:block;}
+  .question .lista b{color:var(--accent);}
+
+  .options{display:grid;gap:10px;}
+  .opt{
+    display:flex;align-items:flex-start;gap:12px;
+    width:100%;text-align:left;
+    background:#fbfcff;
+    border:1.5px solid var(--line);
+    border-radius:13px;
+    padding:13px 15px;
+    font:inherit;
+    font-size:.97rem;
+    color:var(--ink);
+    cursor:pointer;
+    transition:border-color .15s, background .15s, transform .1s;
+  }
+  .opt:hover:not(:disabled){
+    border-color:#b9bdf0;
+    background:#f5f6ff;
+  }
+  .opt:active:not(:disabled){transform:scale(.995);}
+  .opt:disabled{cursor:default;}
+  .opt .key{
+    flex:0 0 26px;height:26px;
+    display:grid;place-items:center;
+    border-radius:8px;
+    background:#eceef8;
+    color:#4a5470;
+    font-size:.8rem;font-weight:800;
+    text-transform:uppercase;
+    transition:background .15s,color .15s;
+  }
+  .opt .txt{flex:1;}
+  .opt.correct{
+    border-color:#7fc79b;
+    background:var(--ok-bg);
+  }
+  .opt.correct .key{background:var(--ok);color:#fff;}
+  .opt.incorrect{
+    border-color:#e6a6a1;
+    background:var(--bad-bg);
+  }
+  .opt.incorrect .key{background:var(--bad);color:#fff;}
+  .opt.dim{opacity:.55;}
+
+  .feedback{
+    margin-top:16px;
+    border-radius:13px;
+    padding:0 16px;
+    max-height:0;
+    overflow:hidden;
+    opacity:0;
+    transition:max-height .3s ease, opacity .3s ease, padding .3s ease;
+  }
+  .feedback.show{
+    max-height:420px;
+    opacity:1;
+    padding:14px 16px;
+  }
+  .feedback.ok{background:var(--ok-bg);border:1px solid #bfe6cd;}
+  .feedback.bad{background:var(--bad-bg);border:1px solid #f0c3bf;}
+  .feedback .title{
+    font-weight:800;font-size:.88rem;letter-spacing:.03em;
+    text-transform:uppercase;margin-bottom:6px;
+  }
+  .feedback.ok .title{color:var(--ok);}
+  .feedback.bad .title{color:var(--bad);}
+  .feedback p{margin:0;font-size:.93rem;color:#333c52;}
+  .feedback p + p{margin-top:8px;}
+  .feedback .ans{font-weight:700;}
+
+  .actions{margin-top:18px;display:flex;justify-content:flex-end;gap:10px;}
+  .btn{
+    font:inherit;font-weight:700;font-size:.95rem;
+    border:none;border-radius:12px;
+    padding:12px 22px;
+    background:var(--accent);color:#fff;
+    cursor:pointer;
+    transition:background .15s, transform .1s, box-shadow .15s;
+    box-shadow:0 6px 16px rgba(79,70,229,.25);
+  }
+  .btn:hover:not(:disabled){background:#4338ca;}
+  .btn:active:not(:disabled){transform:translateY(1px);}
+  .btn:disabled{
+    background:#c9cde0;color:#fff;cursor:not-allowed;box-shadow:none;
+  }
+  .btn.ghost{
+    background:#fff;color:var(--accent);
+    border:1.5px solid #cdd0f2;box-shadow:none;
+  }
+  .btn.ghost:hover{background:#f4f4ff;}
+
+  .score-box{
+    text-align:center;padding:8px 0 4px;
+  }
+  .score-ring{
+    --p:0;
+    width:132px;height:132px;margin:6px auto 14px;
+    border-radius:50%;
+    display:grid;place-items:center;
+    background:conic-gradient(var(--accent) calc(var(--p)*1%), #e3e6f3 0);
+    transition:background .6s ease;
+  }
+  .score-ring .inner{
+    width:104px;height:104px;border-radius:50%;
+    background:#fff;
+    display:grid;place-items:center;
+    box-shadow:inset 0 2px 8px rgba(27,35,51,.06);
+  }
+  .score-ring .num{
+    font-size:1.7rem;font-weight:800;letter-spacing:-.03em;line-height:1;
+  }
+  .score-ring .lbl{font-size:.72rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.08em;}
+  .score-msg{font-size:1.02rem;font-weight:650;margin:0 0 4px;}
+  .score-sub{color:var(--muted);font-size:.9rem;margin:0 0 8px;}
+
+  .review-title{
+    font-size:.8rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;
+    color:var(--muted);margin:26px 0 10px;
+  }
+  .review{display:grid;gap:9px;}
+  .rev-item{
+    border:1px solid var(--line);border-radius:12px;padding:12px 14px;
+    background:#fbfcff;font-size:.9rem;
+  }
+  .rev-item .rev-head{display:flex;gap:9px;align-items:flex-start;font-weight:650;}
+  .rev-item .mark{
+    flex:0 0 20px;height:20px;border-radius:50%;
+    display:grid;place-items:center;font-size:.72rem;font-weight:800;color:#fff;
+    margin-top:2px;
+  }
+  .rev-item.ok .mark{background:var(--ok);}
+  .rev-item.bad .mark{background:var(--bad);}
+  .rev-item .detail{margin:7px 0 0 29px;color:var(--muted);font-size:.86rem;}
+  .rev-item .detail b{color:#2a3348;}
+  .rev-item .detail .good{color:var(--ok);font-weight:700;}
+  .rev-item .detail .wrong{color:var(--bad);font-weight:700;}
+
+  @media (max-width:520px){
+    .card{padding:20px 16px 18px;border-radius:15px;}
+    .question{font-size:1rem;}
+    .actions .btn{width:100%;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="top">
+    <h1>Repaso y simulación de examen</h1>
+    <p>16 preguntas clave · retroalimentación inmediata en cada respuesta</p>
+  </header>
+
+  <div class="progress-wrap" id="progressWrap">
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="progress-label" id="progressLabel">0 / 16</div>
+  </div>
+
+  <main id="card" class="card" aria-live="polite"></main>
+
+</div>
+
+<script>
+const questions = [
+  {
+    tipo: "Selección múltiple",
+    pregunta: "En sus <em>Confesiones</em>, San Agustín describe el conflicto interno del alma (un antecedente de la ambivalencia freudiana) a partir de tres facultades. ¿Cuáles son?",
+    opciones: [
+      "Racional, irascible y apetitiva",
+      "Memoria, entendimiento y voluntad",
+      "Vegetativa, sensitiva e intelectiva"
+    ],
+    correcta: 1,
+    feedback: "San Agustín articula <strong>memoria, entendimiento y voluntad</strong>. El desgarro entre lo que recuerda, lo que comprende y lo que quiere anticipa la ambivalencia psíquica. Las otras opciones corresponden a la tripartición platónica y a los niveles aristotélicos del alma."
+  },
+  {
+    tipo: "Selección múltiple",
+    pregunta: "Un pensador presocrático sostuvo que «el Ser es y el no-Ser no es», y concluyó que el movimiento y el cambio son solo apariencias engañosas de los sentidos. ¿De quién se trata?",
+    opciones: [
+      "Tales de Mileto",
+      "Empédocles",
+      "Parménides"
+    ],
+    correcta: 2,
+    feedback: "Se trata de <strong>Parménides</strong>: el Ser es uno, eterno e inmóvil, y el devenir pertenece a la vía de la opinión (los sentidos), no a la vía de la verdad."
+  },
+  {
+    tipo: "Selección múltiple",
+    pregunta: "En la clínica, cuando un diagnóstico se convierte en esencia fija («es limítrofe», «es víctima») que tapa al sujeto y bloquea toda posibilidad de cambio, ese límite reproduce la visión del Ser de:",
+    opciones: [
+      "Heráclito",
+      "Parménides",
+      "Anaxímenes"
+    ],
+    correcta: 1,
+    feedback: "Es la lógica de <strong>Parménides</strong>: un Ser inmutable, idéntico a sí mismo. Convertir el diagnóstico en esencia repite esa rigidez. Heráclito, en cambio, afirmaría el devenir y la transformación permanente del sujeto."
+  },
+  {
+    tipo: "Selección múltiple",
+    pregunta: "Invocar sin piso ético que «el hombre es la medida de todas las cosas» puede derivar en que un agresor minimice el daño diciendo «eso es solo tu percepción». Esa táctica se conoce como:",
+    opciones: [
+      "Eudaimonía",
+      "Mayéutica",
+      "Gaslighting"
+    ],
+    correcta: 2,
+    feedback: "El relativismo sin límite ético abre la puerta al <strong>gaslighting</strong>: el agresor niega o distorsiona la percepción de la víctima para desestabilizarla. Eudaimonía remite a la felicidad/plenitud y mayéutica al método socrático."
+  },
+  {
+    tipo: "Selección múltiple",
+    pregunta: "¿Qué presocrático adelantó una teoría empírica del conocimiento con la idea de que «lo semejante conoce lo semejante» (por ejemplo, percibimos el amor con nuestro propio amor)?",
+    opciones: [
+      "Empédocles",
+      "Tales",
+      "Platón"
+    ],
+    correcta: 0,
+    feedback: "<strong>Empédocles</strong> sostuvo el conocimiento por semejanza: el sujeto reconoce lo externo porque hay algo afín en él. En clave clínica, esta premisa se vuelve un riesgo si el terapeuta «conoce» al paciente proyectando su propia historia."
+  },
+  {
+    tipo: "Selección múltiple",
+    pregunta: "Obtener un puntaje elevado en un test (por ejemplo, el PHQ-9) obliga a valorar el riesgo, pero el número no significa lo mismo en todos los contextos. Caer en la «cuantofrenia» sin comprender el caso es el límite del enfoque heredado de:",
+    opciones: [
+      "Anaxímenes",
+      "Pitágoras",
+      "Parménides"
+    ],
+    correcta: 1,
+    feedback: "La herencia de <strong>Pitágoras</strong> es la estructura numérica de la realidad. Aplicada sin contexto, el dato cuantitativo sustituye la comprensión del caso: el número manda y el sujeto desaparece."
+  },
+  {
+    tipo: "Selección múltiple",
+    pregunta: "Una víctima desea abandonar a su agresor y, al mismo tiempo, quiere volver con él. Exigirle coherencia absoluta es perderla. Esa «vivencia de los contrarios» remite al pensamiento dialéctico de:",
+    opciones: [
+      "Platón",
+      "Tales",
+      "Heráclito"
+    ],
+    correcta: 2,
+    feedback: "<strong>Heráclito</strong>: los contrarios se implican y todo fluye. La ambivalencia no es un error de la víctima, sino la forma real en que se expresan procesos psíquicos simultáneos."
+  },
+  {
+    tipo: "Selección múltiple",
+    pregunta: "Durante el medievo, la discusión sobre si el comportamiento humano (el alma) podía estudiarse racionalmente o solo a través de la revelación teológica giró en torno a la tensión:",
+    opciones: [
+      "Empirismo vs. Racionalismo",
+      "Amor vs. Discordia",
+      "Razón vs. Fe"
+    ],
+    correcta: 2,
+    feedback: "La tensión central del medievo fue <strong>Razón vs. Fe</strong>: definir si el alma era objeto de estudio racional o territorio exclusivo de la revelación teológica."
+  },
+  {
+    tipo: "Selección múltiple",
+    pregunta: "Las <em>Confesiones</em> de San Agustín suelen considerarse el primer caso clínico autobiográfico. Su técnica de introspección anticipó métodos modernos como:",
+    opciones: [
+      "La asociación libre de Freud y el método experimental de Wundt",
+      "El condicionamiento operante de Skinner",
+      "El método deductivo de Aristóteles"
+    ],
+    correcta: 0,
+    feedback: "La introspección agustiniana anticipó la <strong>asociación libre de Freud</strong> y el <strong>método experimental de Wundt</strong>: el relato introspectivo como vía de acceso a la vida psíquica."
+  },
+  {
+    tipo: "Selección múltiple",
+    pregunta: "Un terapeuta supone que empatizar es «saber» exactamente lo que siente el paciente, proyectando su propia historia personal. Ese riesgo ético se apoya en la premisa presocrática de conocer por semejanza sostenida por:",
+    opciones: [
+      "Heráclito",
+      "Protágoras",
+      "Empédocles"
+    ],
+    correcta: 2,
+    feedback: "<strong>Empédocles</strong> afirmó que lo semejante conoce lo semejante. Proyectar la propia historia creyendo que eso es empatía confunde semejanza con comprensión del otro."
+  },
+  {
+    tipo: "Completamiento",
+    pregunta: "Las «posesiones» registradas en conventos —convulsiones, alucinaciones y delirios por estrés posparto— se reinterpretarían siglos después bajo la figura clínica de la:",
+    opciones: [
+      "Melancolía",
+      "Psicosis",
+      "Histeria"
+    ],
+    correcta: 2,
+    feedback: "Muchos de esos cuadros se resemantizaron como <strong>histeria</strong>: manifestaciones somáticas y disociativas sin lesión orgánica demostrable. Hoy se leerían desde categorías como trastornos conversivos o de estrés."
+  },
+  {
+    tipo: "Completamiento",
+    pregunta: "Anaxímenes sostenía que el aire o ______ sostiene el alma, y que el cambio en la naturaleza se explica por condensación y rarefacción.",
+    opciones: [
+      "Pneuma",
+      "Arché",
+      "Logos"
+    ],
+    correcta: 0,
+    feedback: "El <strong>pneuma</strong> (aire/aliento) es el principio de Anaxímenes: sostiene la vida y el alma, y su condensación o rarefacción explica la diversidad de lo real."
+  },
+  {
+    tipo: "Relación de columnas",
+    pregunta: "Relaciona el concepto criminológico aristotélico con su descripción clínica:",
+    preguntaHTML: `<span class="lista">
+        <span><b>1.</b> Agente racional</span>
+        <span><b>2.</b> Acción voluntaria</span>
+        <span><b>3.</b> Proporcionalidad</span>
+        <span style="margin-top:8px"><b>A.</b> Castigo ajustado a la responsabilidad</span>
+        <span><b>B.</b> Dominio consciente sobre las decisiones</span>
+        <span><b>C.</b> Cálculo de beneficios y consecuencias</span>
+      </span>`,
+    opciones: [
+      "1A, 2B, 3C",
+      "1B, 2A, 3C",
+      "1C, 2B, 3A"
+    ],
+    correcta: 2,
+    feedback: "El agente racional <strong>calcula</strong> (1C), la acción voluntaria implica <strong>dominio consciente</strong> (2B) y la proporcionalidad exige un <strong>castigo ajustado a la responsabilidad</strong> (3A)."
+  },
+  {
+    tipo: "Ordenamiento",
+    pregunta: "Ordena los pasos del método inductivo, tal como se empleó clásicamente en la tradición hipocrática:",
+    preguntaHTML: `<span class="lista">
+        <span><b>1.</b> Llegar a generalizaciones clínicas</span>
+        <span><b>2.</b> Observar los casos particulares de los enfermos</span>
+        <span><b>3.</b> Registrar los síntomas naturales</span>
+      </span>`,
+    opciones: [
+      "1, 2, 3",
+      "2, 3, 1",
+      "3, 1, 2"
+    ],
+    correcta: 1,
+    feedback: "El camino inductivo parte de lo particular: <strong>observar los casos (2) → registrar los síntomas (3) → generalizar (1)</strong>. La generalización es el último paso, nunca el primero."
+  },
+  {
+    tipo: "Ordenamiento",
+    pregunta: "Ordena los elementos de la «triple contingencia» conductual, que se nutre de la lógica causal clínica:",
+    preguntaHTML: `<span class="lista">
+        <span><b>1.</b> Estímulo (ambiente)</span>
+        <span><b>2.</b> Respuesta</span>
+        <span><b>3.</b> Estímulo previo</span>
+      </span>`,
+    opciones: [
+      "2, 1, 3",
+      "1, 2, 3",
+      "3, 2, 1"
+    ],
+    correcta: 2,
+    feedback: "La secuencia es <strong>estímulo previo (3) → respuesta (2) → estímulo consecuente o ambiente (1)</strong>: algo antecede a la conducta y algo la sigue, modulando su probabilidad futura."
+  },
+  {
+    tipo: "Ordenamiento",
+    pregunta: "Ordena cronológicamente la evolución del trato y la conceptualización de las enfermedades mentales y las «posesiones» durante la crisis del siglo XVI:",
+    preguntaHTML: `<span class="lista">
+        <span><b>1.</b> Weyer publica <em>De praestigiis daemonum</em> (modelo médico)</span>
+        <span><b>2.</b> Persecución sistemática mediante el manual demonológico <em>Malleus Maleficarum</em></span>
+        <span><b>3.</b> Cuestionamiento de las explicaciones demonológicas a partir de la Reforma de Lutero</span>
+      </span>`,
+    opciones: [
+      "1, 2, 3",
+      "2, 3, 1",
+      "3, 1, 2"
+    ],
+    correcta: 1,
+    feedback: "Primero el manual demonológico que sistematiza la persecución <strong>(2)</strong>, luego su cuestionamiento en el contexto de la Reforma <strong>(3)</strong> y finalmente la propuesta médica de Weyer <strong>(1)</strong>."
+  }
+];
+
+let idx = 0;
+let aciertos = 0;
+const respuestas = new Array(questions.length).fill(null);
+
+const card = document.getElementById('card');
+const fill = document.getElementById('progressFill');
+const label = document.getElementById('progressLabel');
+const progressWrap = document.getElementById('progressWrap');
+const LETRAS = ['a', 'b', 'c', 'd'];
+
+function actualizarProgreso() {
+  const respondidas = respuestas.filter(r => r !== null).length;
+  fill.style.width = (respondidas / questions.length) * 100 + '%';
+  label.textContent = respondidas + ' / ' + questions.length;
+}
+
+function renderPregunta() {
+  const q = questions[idx];
+  progressWrap.style.display = 'flex';
+
+  card.innerHTML = `
+    <div class="meta">
+      <span class="badge">${q.tipo}</span>
+      <span class="counter">Pregunta ${idx + 1} de ${questions.length}</span>
+    </div>
+    <h2 class="question">${q.pregunta}${q.preguntaHTML || ''}</h2>
+    <div class="options" id="options"></div>
+    <div class="feedback" id="feedback"></div>
+    <div class="actions">
+      <button class="btn" id="next" disabled>
+        ${idx === questions.length - 1 ? 'Ver resultados' : 'Siguiente →'}
+      </button>
+    </div>
+  `;
+
+  const cont = document.getElementById('options');
+  q.opciones.forEach((op, i) => {
+    const b = document.createElement('button');
+    b.className = 'opt';
+    b.type = 'button';
+    b.innerHTML = `<span class="key">${LETRAS[i]}</span><span class="txt">${op}</span>`;
+    b.addEventListener('click', () => responder(i));
+    cont.appendChild(b);
+  });
+
+  document.getElementById('next').addEventListener('click', siguiente);
+  actualizarProgreso();
+}
+
+function responder(elegida) {
+  const q = questions[idx];
+  if (respuestas[idx] !== null) return;
+
+  respuestas[idx] = elegida;
+  const acierto = elegida === q.correcta;
+  if (acierto) aciertos++;
+
+  const botones = [...document.querySelectorAll('.opt')];
+  botones.forEach((b, i) => {
+    b.disabled = true;
+    if (i === q.correcta) b.classList.add('correct');
+    else if (i === elegida) b.classList.add('incorrect');
+    else b.classList.add('dim');
+  });
+
+  const fb = document.getElementById('feedback');
+  fb.className = 'feedback show ' + (acierto ? 'ok' : 'bad');
+  fb.innerHTML = acierto
+    ? `<div class="title">✔ Correcto</div><p>${q.feedback}</p>`
+    : `<div class="title">✘ Incorrecto</div>
+       <p class="ans">Respuesta correcta: ${LETRAS[q.correcta]}) ${q.opciones[q.correcta]}</p>
+       <p>${q.feedback}</p>
+       <p><em>Te recomendamos consultar el material de los contenidos semanales dentro de Blackboard para reforzar este tema.</em></p>`;
+
+  document.getElementById('next').disabled = false;
+  actualizarProgreso();
+}
+
+function siguiente() {
+  if (idx < questions.length - 1) {
+    idx++;
+    renderPregunta();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } else {
+    mostrarResultados();
+  }
+}
+
+function mostrarResultados() {
+  progressWrap.style.display = 'none';
+  const total = questions.length;
+  const pct = Math.round((aciertos / total) * 100);
+
+  let msg, sub;
+  if (pct === 100)      { msg = '¡Dominio total del contenido!'; sub = 'Puedes rendir el examen con confianza.'; }
+  else if (pct >= 80)   { msg = 'Excelente desempeño';           sub = 'Repasa solo los puntos fallados y estarás listo.'; }
+  else if (pct >= 60)   { msg = 'Buen avance, con puntos por afinar'; sub = 'Refuerza los contenidos marcados en rojo.'; }
+  else if (pct >= 40)   { msg = 'Base en construcción';          sub = 'Vuelve al material de las preguntas falladas.'; }
+  else                  { msg = 'Conviene repasar el contenido completo'; sub = 'Revisa las explicaciones y reintenta la simulación.'; }
+
+  let html = `
+    <div class="score-box">
+      <div class="score-ring" style="--p:${pct}">
+        <div class="inner">
+          <div>
+            <div class="num">${aciertos}/${total}</div>
+            <div class="lbl">${pct}%</div>
+          </div>
+        </div>
+      </div>
+      <p class="score-msg">${msg}</p>
+      <p class="score-sub">${sub}</p>
+    </div>
+    <div class="review-title">Revisión pregunta por pregunta</div>
+    <div class="review">`;
+
+  questions.forEach((q, i) => {
+    const r = respuestas[i];
+    const ok = r === q.correcta;
+    const tuResp = r === null ? 'Sin responder' : `${LETRAS[r]}) ${q.opciones[r]}`;
+    const corr = `${LETRAS[q.correcta]}) ${q.opciones[q.correcta]}`;
+    const titulo = q.pregunta.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    html += `
+      <div class="rev-item ${ok ? 'ok' : 'bad'}">
+        <div class="rev-head">
+          <span class="mark">${ok ? '✓' : '✕'}</span>
+          <span>${i + 1}. ${titulo.length > 120 ? titulo.slice(0, 120) + '…' : titulo}</span>
+        </div>
+        <div class="detail">
+          Tu respuesta: <span class="${ok ? 'good' : 'wrong'}">${tuResp}</span>
+          ${ok ? '' : `<br>Correcta: <b>${corr}</b>`}
+        </div>
+      </div>`;
+  });
+
+  html += `</div>
+    <div class="actions" style="margin-top:22px">
+      <button class="btn ghost" id="restart">↻ Reiniciar simulación</button>
+    </div>`;
+
+  card.innerHTML = html;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  document.getElementById('restart').addEventListener('click', reiniciar);
+}
+
+function reiniciar() {
+  idx = 0;
+  aciertos = 0;
+  respuestas.fill(null);
+  renderPregunta();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+renderPregunta();
+</script>
+</body>
+</html>
